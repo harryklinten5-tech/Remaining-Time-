@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8-Hour Shift Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px auto;
+            max-width: 500px;
+            padding: 20px;
+            background-color: #f4f7f6;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .note {
+            font-size: 12px;
+            color: #777;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>⏳ 8-Hour Shift Tracker</h2>
+    <p class="note" style="text-align: center; margin-bottom: 20px;">Inputs default to PM unless you explicitly write "am" (e.g., 3.10 am)</p>
+
+    <div class="form-group">
+        <label for="completedTime">Already Completed Time (HH.MM):</label>
+        <input type="text" id="completedTime" placeholder="e.g., 03.30">
+    </div>
+
+    <div class="form-group">
+        <label for="targetTime">Counting Start Time (e.g., 3.10 am):</label>
+        <input type="text" id="targetTime" placeholder="Leave blank for current time">
+        <div class="note">Press Calculate without entering a value to use your current clock time.</div>
+    </div>
+
+    <button onclick="calculateShiftBacklog()">Calculate Balance</button>
+
+    <script>
+        function parse12hrInput(timeString) {
+            let cleaned = timeString.toLowerCase().trim();
+            
+            // Check if user explicitly wrote 'am'
+            let isAm = cleaned.includes("am");
+            
+            // Strip away 'am' or 'pm' to parse numbers
+            let numericPart = cleaned.replace("am", "").replace("pm", "").trim();
+            
+            let parts = numericPart.split('.');
+            if (parts.length !== 2) {
+                throw new Error("Invalid format");
+            }
+            
+            let hours = parseInt(parts[0], 10);
+            let minutes = parseInt(parts[1], 10);
+            
+            if (isNaN(hours) || isNaN(minutes) || minutes < 0 || minutes >= 60) {
+                throw new Error("Invalid numbers");
+            }
+
+            // 12-hour to 24-hour conversion logic
+            if (isAm) {
+                if (hours === 12) {
+                    hours = 0; // 12 AM is 00:00
+                }
+            } else {
+                if (hours !== 12) {
+                    hours += 12; // Standard PM conversion
+                }
+            }
+            
+            return { hours, minutes };
+        }
+
+        function format12Hour(date) {
+            let hours = date.getHours();
+            let minutes = date.getMinutes();
+            let seconds = date.getSeconds();
+            let ampm = hours >= 12 ? 'PM' : 'AM';
+            
+            hours = hours % 12;
+            hours = hours ? hours : 12; // the hour '0' should be '12'
+            
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            seconds = seconds < 10 ? '0' + seconds : seconds;
+            
+            return `${hours}:${minutes}:${seconds} ${ampm}`;
+        }
+
+        function calculateShiftBacklog() {
+            let completedInput = document.getElementById("completedTime").value.trim();
+            let targetInput = document.getElementById("targetTime").value.trim();
+
+            // 1. Parse already completed time
+            let compParts = completedInput.split('.');
+            if (compParts.length !== 2) {
+                alert("❌ Invalid format for Completed Time! Use HH.MM (e.g., 03.30)");
+                return;
+            }
+            let compHours = parseInt(compParts[0], 10);
+            let compMinutes = parseInt(compParts[1], 10);
+            
+            if (isNaN(compHours) || isNaN(compMinutes) || compMinutes >= 60) {
+                alert("❌ Invalid input numbers for Completed Time.");
+                return;
+            }
+
+            // Convert completed time into total milliseconds worked
+            let completedMs = ((compHours * 60) + compMinutes) * 60 * 1000;
+            let totalShiftMs = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+            let msLeftToWork = totalShiftMs - completedMs;
+
+            // 2. Parse Target/Counting time
+            let targetTime = new Date(); // Defaults to now
+            
+            if (targetInput !== "") {
+                try {
+                    let parsedTime = parse12hrInput(targetInput);
+                    targetTime.setHours(parsedTime.hours);
+                    targetTime.setMinutes(parsedTime.minutes);
+                    targetTime.setSeconds(0);
+                    targetTime.setMilliseconds(0);
+                } catch (e) {
+                    alert("❌ Invalid format for Target Time! Use HH.MM, HH.MM am, or HH.MM pm.");
+                    return;
+                }
+            }
+
+            // 3. Process final outputs into alert message
+            let resultText = `Counting Started At: ${format12Hour(targetTime)}\n\n`;
+
+            if (msLeftToWork > 0) {
+                let completionClockTime = new Date(targetTime.getTime() + msLeftToWork);
+                
+                let totalSecondsLeft = msLeftToWork / 1000;
+                let hoursLeft = Math.floor(totalSecondsLeft / 3600);
+                let minutesLeft = Math.floor((totalSecondsLeft % 3600) / 60);
+                
+                resultText += `⌛ Time You Must Wait: ${hoursLeft} hr, ${minutesLeft} min\n`;
+                resultText += `🎯 Your Shift Ends At: ${format12Hour(completionClockTime)}`;
+            } else {
+                resultText += `🎉 8 hours are already done! No extra waiting needed.`;
+            }
+
+            // Fire the native alert popup
+            alert(resultText);
+        }
+    </script>
+</body>
+</html>
