@@ -236,13 +236,11 @@
     <div class="container">
         <h2>⏳ Shift Tracker</h2>
 
-        <!-- Shift Duration Dropdown -->
         <div class="form-group">
             <label for="shiftLength">Select Total Shift Duration</label>
             <select id="shiftLength"></select>
         </div>
 
-        <!-- 24-Hour Format Switch -->
         <div class="toggle-container">
             <span class="toggle-label">Use 24-Hour Input Format</span>
             <label class="switch">
@@ -251,14 +249,12 @@
             </label>
         </div>
 
-        <!-- Input 1: Duration Spent -->
         <div class="form-group">
-            <label for="completedTime">Already Completed Time (HH.MM)</label>
-            <input type="text" id="completedTime" placeholder="e.g., 03.30 (3 hours 30 mins done)">
+            <label for="completedTime">Already Completed Time (HH:MM or HH.MM)</label>
+            <input type="text" id="completedTime" placeholder="e.g., 03:30 or 03.30">
             <div class="note">Enter how many exact hours and minutes you have worked so far.</div>
         </div>
 
-        <!-- Input 2: Starting Clock Target Timestamp -->
         <div class="form-group">
             <label for="targetTime">Counting Start Time</label>
             <div class="input-with-addon">
@@ -273,7 +269,6 @@
 
         <button onclick="calculateShiftBacklog()">Calculate & Track</button>
 
-        <!-- Dynamic Countdown Section -->
         <div class="results-panel" id="resultsPanel">
             <h3>📊 Shift Metrics</h3>
             <p id="startedAtText"></p>
@@ -312,12 +307,12 @@
 
             if (is24hr) {
                 ampmSelect.style.display = 'none';
-                note.textContent = "Enter clock time in 24hr format (e.g., 15.30). Blank uses current time.";
-                targetInput.placeholder = "e.g., 15.10";
+                note.textContent = "Enter clock time in 24hr format (e.g., 15:30 or 15.30). Blank uses current time.";
+                targetInput.placeholder = "e.g., 15:10";
             } else {
                 ampmSelect.style.display = 'block';
-                note.textContent = "Enter clock time (e.g., 03.10) and choose AM/PM. Blank uses current time.";
-                targetInput.placeholder = "e.g., 03.10";
+                note.textContent = "Enter clock time (e.g., 03:10 or 03.10) and choose AM/PM. Blank uses current time.";
+                targetInput.placeholder = "e.g., 03:10";
             }
 
             if (shiftStartTimeObj && targetEndTimeMs) {
@@ -325,9 +320,15 @@
             }
         }
 
+        // Normalizes dividers by forcing colons into dots for structural parity
+        function cleanTimeSeparator(str) {
+            return str.trim().replace(':', '.');
+        }
+
         function parseDuration(durationString) {
             if (!durationString) return { hours: 0, minutes: 0 };
-            let parts = durationString.trim().split('.');
+            let normalized = cleanTimeSeparator(durationString);
+            let parts = normalized.split('.');
             if (parts.length !== 2) throw new Error("Format error");
             
             let hours = parseInt(parts[0], 10);
@@ -339,9 +340,11 @@
             return { hours, minutes };
         }
 
+        style="text-align: left;"
         function parseClockTime(timeString) {
             const use24hr = document.getElementById('formatToggle').checked;
-            let parts = timeString.trim().split('.');
+            let normalized = cleanTimeSeparator(timeString);
+            let parts = normalized.split('.');
             if (parts.length !== 2) throw new Error("Format error");
             
             let hours = parseInt(parts[0], 10);
@@ -363,7 +366,6 @@
             }
         }
 
-        // Helper function that explicitly outputs both variations together
         function formatDualTimeDisplay(date) {
             let hours = date.getHours();
             let minutes = date.getMinutes();
@@ -372,13 +374,11 @@
             let paddedMin = minutes < 10 ? '0' + minutes : minutes;
             let paddedSec = seconds < 10 ? '0' + seconds : seconds;
 
-            // 1. Calculate 12hr String representation
             let ampm = hours >= 12 ? 'PM' : 'AM';
             let hours12 = hours % 12;
             hours12 = hours12 ? hours12 : 12;
             let string12hr = `${hours12}:${paddedMin}:${paddedSec} ${ampm}`;
 
-            // 2. Calculate 24hr String representation
             let hours24 = hours < 10 ? '0' + hours : hours;
             let string24hr = `${hours24}:${paddedMin}:${paddedSec}`;
 
@@ -405,7 +405,7 @@
                 compHours = parsedComp.hours;
                 compMinutes = parsedComp.minutes;
             } catch (e) {
-                alert("❌ Invalid Completed Time format! Use HH.MM (e.g., 02.45).");
+                alert("❌ Invalid Completed Time format! Use HH:MM or HH.MM (e.g., 02:45 or 02.45).");
                 return;
             }
 
@@ -423,7 +423,7 @@
                     shiftStartTimeObj.setSeconds(0);
                     shiftStartTimeObj.setMilliseconds(0);
                 } catch (e) {
-                    alert("❌ Invalid Start Time format! Check boundaries matching input choice mode.");
+                    alert("❌ Invalid Start Time format! Ensure correct numbers matching input choice mode.");
                     return;
                 }
             }
@@ -471,3 +471,4 @@
     </script>
 </body>
 </html>
+
