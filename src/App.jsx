@@ -57,6 +57,7 @@ export default function App() {
   const [now, setNow] = useState(Date.now());
   const [message, setMessage] = useState('');
   const [saved, setSaved] = useState(false);
+  const [showKekaSetup, setShowKekaSetup] = useState(false);
 
   useEffect(() => {
     const tick = () => {
@@ -161,10 +162,16 @@ export default function App() {
         <div><span>Completed</span><strong>{result.error ? '—' : Math.floor(result.completed / 60) + 'h ' + result.completed % 60 + 'm'}</strong></div>
       </section>
       <aside className="keka">
-        <p className="eyebrow">KEKA INTEGRATION</p>
-        <h2>Automatic attendance data</h2>
-        <p>Keka sync needs your employer’s API access and a secure server-side connection. Keep API keys and credentials out of browser code.</p>
+        <p className="eyebrow">THIRD-PARTY CONNECTION</p>
+        <h2>Connect Keka</h2>
+        <p>Connect your Keka account to bring your attendance data into Shift Tracker. You stay in control of the connection.</p>
         <span>Not connected</span>
+        <button className="primary" type="button" onClick={() => setShowKekaSetup(!showKekaSetup)}>{showKekaSetup ? 'Hide connection details' : 'Connect Keka'}</button>
+        {showKekaSetup && <div className="keka-setup" role="status">
+          <strong>Keka connection is not available yet.</strong>
+          <p>We’re preparing secure account authorization. Once enabled, you’ll sign in to Keka and approve access. Only then will authorized attendance data sync here.</p>
+          <p>No Keka password or API key should be entered into this page.</p>
+        </div>}
       </aside>
     </section>
     <footer>Local-first · No account required · Your time stays private</footer>
