@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const KEY = 'shift-tracker-v1';
-const KEKA_API_URL = (import.meta.env.VITE_KEKA_API_URL || '').replace(/\\/+$/, '');
+const KEKA_API_URL = (import.meta.env.VITE_KEKA_API_URL || '').replace(/\/+$/, '');
 const KEKA_STATUS_KEY = ['keka', 'status'];
 const dateKey = (date = new Date()) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
 const currentDefaults = () => {
@@ -34,13 +34,13 @@ function TimeEntry({ value, onChange }) {
 }
 
 function durationMinutes(value) {
-  const match = /^\\s*(\\d{1,3})\\s*[:.]\\s*(\\d{1,2})\\s*$/.exec(value);
+  const match = /^\s*(\d{1,3})\s*[:.]\s*(\d{1,2})\s*$/.exec(value);
   if (!match || Number(match[2]) > 59) throw new Error('Enter completed time as HH:MM, with minutes from 00 to 59.');
   return Number(match[1]) * 60 + Number(match[2]);
 }
 
 function parseClock(value) {
-  const match = /^\\s*(\\d{1,2}):(\\d{2})\\s*(AM|PM)?\\s*$/i.exec(value);
+  const match = /^\s*(\d{1,2}):(\d{2})\s*(AM|PM)?\s*$/i.exec(value);
   if (!match) throw new Error('Enter a time like 2:30 PM or 14:30.');
   let hour = Number(match[1]);
   const minute = Number(match[2]);
