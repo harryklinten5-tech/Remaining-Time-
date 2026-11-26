@@ -57,7 +57,6 @@ export default function App() {
   const [now, setNow] = useState(Date.now());
   const [message, setMessage] = useState('');
   const [saved, setSaved] = useState(false);
-
   useEffect(() => {
     const tick = () => {
       setNow(Date.now());
@@ -97,6 +96,8 @@ export default function App() {
       return { remaining, completed, end, seconds: Math.max(0, Math.floor((end.getTime() - now) / 1000)) };
     } catch (error) { return { error: error.message }; }
   }, [form, now]);
+
+  const shiftComplete = !result.error && result.seconds === 0;
 
   useEffect(() => {
     if (result.error) { setSaved(false); return; }
@@ -160,13 +161,13 @@ export default function App() {
         <div><span>Estimated end (24-hour)</span><strong>{result.error ? '—' : formatTime(result.end, false)}</strong></div>
         <div><span>Completed</span><strong>{result.error ? '—' : Math.floor(result.completed / 60) + 'h ' + result.completed % 60 + 'm'}</strong></div>
       </section>
-      <aside className="keka">
-        <p className="eyebrow">KEKA INTEGRATION</p>
-        <h2>Automatic attendance data</h2>
-        <p>Keka sync needs your employer’s API access and a secure server-side connection. Keep API keys and credentials out of browser code.</p>
-        <span>Not connected</span>
-      </aside>
+      {shiftComplete && <section className="celebration" aria-live="polite" aria-label="Shift complete">
+        <p className="eyebrow">SHIFT COMPLETE</p>
+        <h2>Great work today!</h2>
+        <p>You’ve earned your time to unwind.</p>
+      </section>}
     </section>
+    {shiftComplete && <div className="confetti" aria-hidden="true">{Array.from({ length: 32 }, (_, i) => <span key={i} style={{ '--i': i }} />)}</div>}
     <footer>Local-first · No account required · Your time stays private</footer>
   </main>;
 }
