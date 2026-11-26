@@ -167,7 +167,7 @@ export default function App() {
         <p>You’ve earned your time to unwind.</p>
       </section>}
     </section>
-    {shiftComplete && <div className="confetti" aria-hidden="true">{Array.from({ length: 14 }, (_, i) => <span key={i} style={{ '--i': i }} />)}</div>}
+    {shiftComplete && <div className="confetti" aria-hidden="true">{Array.from({ length: 32 }, (_, i) => <span key={i} style={{ '--i': i }} />)}</div>}
     <footer>Local-first · No account required · Your time stays private</footer>
   </main>;
 }
