@@ -18,4 +18,4 @@ npm run dev
 
 ## Keka
 
-Keka sync is not implemented yet. It requires employer-approved API access, the relevant Keka API documentation/auth method, and a server-side proxy so credentials never enter browser code. Store credentials in server/deployment secrets, not VITE_ variables.
+Keka SSO sign-in is being added through the backend. It verifies employee identity only; timesheet/attendance access is separate and is not implemented. Keka SSO access requires credentials and approval from Keka (currently documented as privileged-partner access). Never place SSO or API secrets in VITE_ variables.
