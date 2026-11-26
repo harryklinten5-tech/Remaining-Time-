@@ -52,8 +52,7 @@ export default function App() {
       const total = Number(form.shiftHours) * 60;
       if (!Number.isInteger(total) || total < 60 || total > 720) throw new Error('Select a shift length from 1 to 12 hours.');
       const completed = durationMinutes(form.completed);
-      if (completed > total) throw new Error('Completed time cannot exceed the shift length.');
-      const remaining = total - completed;
+      const remaining = Math.max(0, total - completed);
       const start = form.startDateTime ? new Date(form.startDateTime) : new Date(now);
       if (Number.isNaN(start.getTime())) throw new Error('Choose a valid start date and time.');
       const end = new Date(start.getTime() + remaining * 60000);
