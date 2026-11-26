@@ -15,7 +15,3 @@ npm run dev
 - The entry is scoped to the browser's local calendar date and is cleared when that date changes, including when the app is reopened after midnight.
 - Time inputs validate hours/minutes and support HH:MM or HH.MM. Clock input validates 12-hour AM/PM or 24-hour format.
 - With a shift start time, estimated end is start plus shift length. Without it, remaining duration counts down from now.
-
-## Keka
-
-Keka SSO sign-in is being added through the backend. It verifies employee identity only; timesheet/attendance access is separate and is not implemented. Keka SSO access requires credentials and approval from Keka (currently documented as privileged-partner access). Never place SSO or API secrets in VITE_ variables.
