@@ -1,24 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const KEY = 'shift-tracker-v1';
-const KEKA_API_URL = (import.meta.env.VITE_KEKA_API_URL || '').replace(/\/+$/, '');
-const KEKA_STATUS_KEY = ['keka', 'status'];
 const dateKey = (date = new Date()) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
 const currentDefaults = () => {
   const now = new Date();
   return { shiftHours: '8', completed: '00:00', startDate: dateKey(now), startTime: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') };
 };
 const DEFAULTS = currentDefaults();
-
-async function kekaRequest(path, options = {}) {
-  const response = await fetch(`${KEKA_API_URL}${path}`, { credentials: 'include', ...options });
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.error || `Keka request failed (${response.status}).`);
-  }
-  return response.status === 204 ? null : response.json();
-}
 
 function loadToday() {
   try {
@@ -65,28 +53,10 @@ function formatTime(date, hour12) {
 }
 
 export default function App() {
-  const queryClient = useQueryClient();
   const [form, setForm] = useState(loadToday);
   const [now, setNow] = useState(Date.now());
   const [message, setMessage] = useState('');
   const [saved, setSaved] = useState(false);
-  const kekaStatusQuery = useQuery({
-    queryKey: KEKA_STATUS_KEY,
-    queryFn: () => kekaRequest('/api/keka/status'),
-    enabled: Boolean(KEKA_API_URL),
-    retry: false,
-    staleTime: 30_000,
-    refetchOnWindowFocus: true
-  });
-  const disconnectKeka = useMutation({
-    mutationFn: () => kekaRequest('/api/keka/disconnect', { method: 'POST' }),
-    onSuccess: () => queryClient.setQueryData(KEKA_STATUS_KEY, { connected: false, connectedAt: null, accessTokenExpiresAt: null }),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: KEKA_STATUS_KEY })
-  });
-  const kekaConnected = Boolean(kekaStatusQuery.data?.connected);
-  const kekaLoading = Boolean(KEKA_API_URL) && kekaStatusQuery.isLoading;
-  const kekaError = kekaStatusQuery.error?.message || disconnectKeka.error?.message || '';
-
   useEffect(() => {
     const tick = () => {
       setNow(Date.now());
@@ -189,18 +159,6 @@ export default function App() {
         <div><span>Estimated end (24-hour)</span><strong>{result.error ? '—' : formatTime(result.end, false)}</strong></div>
         <div><span>Completed</span><strong>{result.error ? '—' : Math.floor(result.completed / 60) + 'h ' + result.completed % 60 + 'm'}</strong></div>
       </section>
-      <aside className="keka">
-        <p className="eyebrow">THIRD-PARTY CONNECTION</p>
-        <h2>Connect Keka</h2>
-        <p>Sign in through Keka to verify your employee identity. Timesheet and attendance data access is not enabled yet.</p>
-        <span>{kekaLoading ? 'Checking connection…' : kekaConnected ? `Signed in${kekaStatusQuery.data?.user?.email ? ` as ${kekaStatusQuery.data.user.email}` : ''}` : 'Not connected'}</span>
-        {!kekaConnected
-          ? <button className="primary" type="button" disabled={!KEKA_API_URL || kekaLoading} onClick={() => window.location.assign(`${KEKA_API_URL}/api/keka/connect`)}>Sign in with Keka</button>
-          : <button className="primary" type="button" disabled={disconnectKeka.isPending} onClick={() => disconnectKeka.mutate()}>{disconnectKeka.isPending ? 'Disconnecting…' : 'Disconnect Keka'}</button>}
-        {kekaError && <p className="error" role="alert">{kekaError}</p>}
-        {!KEKA_API_URL && <p className="hint">The Keka backend URL is not configured for this deployment.</p>}
-        <p className="hint">You’ll sign in on Keka’s official page. This connection verifies identity only; timesheet access requires separate Keka approval.</p>
-      </aside>
     </section>
     <footer>Local-first · No account required · Your time stays private</footer>
   </main>;
