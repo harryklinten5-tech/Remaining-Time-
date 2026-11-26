@@ -89,16 +89,13 @@ app.get('/api/keka/connect', (req, res, next) => {
     const c = config();
     const state = crypto.randomBytes(32).toString('base64url');
     setSealedCookie(res, stateCookieName, { state, createdAt: Date.now() }, c.sessionKey, STATE_TTL);
-    const nonce = crypto.randomBytes(32).toString('base64url');
-    setSealedCookie(res, stateCookieName, { state, nonce, createdAt: Date.now() }, c.sessionKey, STATE_TTL);
     const url = new URL('/connect/authorize', c.authority);
     url.search = new URLSearchParams({
       response_type: 'code',
       client_id: c.clientId,
       redirect_uri: c.redirectUri,
       scope: 'openid',
-      state,
-      nonce
+      state
     }).toString();
     res.redirect(url.toString());
   } catch (e) { next(e); }
