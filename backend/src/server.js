@@ -27,18 +27,26 @@ app.use((req, _res, next) => {
 app.use('/api/keka', rateLimit({ windowMs: 15 * 60 * 1000, limit: 30 }));
 
 function config() {
-  const { KEKA_ENVIRONMENT, KEKA_CLIENT_ID, KEKA_CLIENT_SECRET, KEKA_REDIRECT_URI, KEKA_SESSION_SECRET } = process.env;
-  if (![KEKA_ENVIRONMENT, KEKA_CLIENT_ID, KEKA_CLIENT_SECRET, KEKA_REDIRECT_URI, KEKA_SESSION_SECRET].every(Boolean)) {
-    const e = new Error('Keka OAuth is not configured. Set the required KEKA_* environment variables.'); e.status = 503; throw e;
+  const { KEKA_SSO_AUTHORITY, KEKA_SSO_CLIENT_ID, KEKA_SSO_CLIENT_SECRET, KEKA_SSO_REDIRECT_URI, KEKA_SESSION_SECRET } = process.env;
+  if (![KEKA_SSO_AUTHORITY, KEKA_SSO_CLIENT_ID, KEKA_SSO_CLIENT_SECRET, KEKA_SSO_REDIRECT_URI, KEKA_SESSION_SECRET].every(Boolean)) {
+    const e = new Error('Keka SSO is not configured. Set the required KEKA_SSO_* environment variables.'); e.status = 503; throw e;
+  }
+  let authority;
+  try {
+    const parsed = new URL(KEKA_SSO_AUTHORITY);
+    if (parsed.protocol !== 'https:' || parsed.pathname !== '/' || parsed.search || parsed.hash) throw new Error();
+    authority = parsed.origin;
+  } catch {
+    const e = new Error('KEKA_SSO_AUTHORITY must be an HTTPS origin, for example https://login.keka.com.'); e.status = 503; throw e;
   }
   if (!/^[a-f0-9]{64}$/i.test(KEKA_SESSION_SECRET)) {
     const e = new Error('KEKA_SESSION_SECRET must be 64 hexadecimal characters.'); e.status = 503; throw e;
   }
   return {
-    environment: KEKA_ENVIRONMENT,
-    clientId: KEKA_CLIENT_ID,
-    clientSecret: KEKA_CLIENT_SECRET,
-    redirectUri: KEKA_REDIRECT_URI,
+    authority,
+    clientId: KEKA_SSO_CLIENT_ID,
+    clientSecret: KEKA_SSO_CLIENT_SECRET,
+    redirectUri: KEKA_SSO_REDIRECT_URI,
     sessionKey: Buffer.from(KEKA_SESSION_SECRET, 'hex')
   };
 }
@@ -81,13 +89,16 @@ app.get('/api/keka/connect', (req, res, next) => {
     const c = config();
     const state = crypto.randomBytes(32).toString('base64url');
     setSealedCookie(res, stateCookieName, { state, createdAt: Date.now() }, c.sessionKey, STATE_TTL);
-    const url = new URL('https://login.' + c.environment + '.com/connect/authorize');
+    const nonce = crypto.randomBytes(32).toString('base64url');
+    setSealedCookie(res, stateCookieName, { state, nonce, createdAt: Date.now() }, c.sessionKey, STATE_TTL);
+    const url = new URL('/connect/authorize', c.authority);
     url.search = new URLSearchParams({
       response_type: 'code',
       client_id: c.clientId,
       redirect_uri: c.redirectUri,
-      scope: 'openid profile offline_access',
-      state
+      scope: 'openid',
+      state,
+      nonce
     }).toString();
     res.redirect(url.toString());
   } catch (e) { next(e); }
@@ -104,7 +115,7 @@ app.get('/api/keka/callback', async (req, res, next) => {
       return res.status(400).send('Invalid or expired Keka authorization. Please reconnect.');
     }
 
-    const response = await fetch('https://login.' + c.environment + '.com/connect/token', {
+    const response = await fetch(new URL('/connect/token', c.authority), {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
       body: new URLSearchParams({
@@ -113,7 +124,7 @@ app.get('/api/keka/callback', async (req, res, next) => {
         client_secret: c.clientSecret,
         redirect_uri: c.redirectUri,
         code,
-        scope: 'openid profile offline_access'
+        scope: 'openid'
       }),
       signal: AbortSignal.timeout(15000)
     });
@@ -123,11 +134,21 @@ app.get('/api/keka/callback', async (req, res, next) => {
       return res.status(502).send('Keka token exchange failed. Check the OAuth app settings and callback URL.');
     }
 
+    const profileResponse = await fetch(new URL('/connect/userinfo', c.authority), {
+      headers: { authorization: `Bearer ${payload.access_token}`, accept: 'application/json' },
+      signal: AbortSignal.timeout(15000)
+    });
+    const profile = await profileResponse.json().catch(() => ({}));
+    if (!profileResponse.ok || typeof profile.sub !== 'string' || !profile.sub) {
+      console.error('Keka SSO userinfo HTTP status:', profileResponse.status);
+      return res.status(502).send('Keka sign-in succeeded but the user profile could not be verified.');
+    }
     const session = {
       accessToken: payload.access_token,
       refreshToken: payload.refresh_token || null,
-      expiresAt: Date.now() + Number(payload.expires_in || 86400) * 1000,
-      connectedAt: new Date().toISOString()
+      expiresAt: Date.now() + Number(payload.expires_in || 3600) * 1000,
+      connectedAt: new Date().toISOString(),
+      user: { sub: profile.sub, email: typeof profile.email === 'string' ? profile.email : null, name: typeof profile.name === 'string' ? profile.name : null }
     };
     setSealedCookie(res, cookieName, session, c.sessionKey, Math.min(Number(payload.expires_in || 86400) * 1000, 7 * 86400000));
     const target = new URL(frontendOrigin);
@@ -141,7 +162,7 @@ app.get('/api/keka/status', (req, res, next) => {
     const c = config();
     const session = sessionFrom(req, c.sessionKey);
     const connected = Boolean(session?.accessToken && session.expiresAt > Date.now());
-    res.json({ connected, connectedAt: connected ? session.connectedAt : null, accessTokenExpiresAt: connected ? new Date(session.expiresAt).toISOString() : null });
+    res.json({ connected, connectedAt: connected ? session.connectedAt : null, user: connected ? session.user : null, accessTokenExpiresAt: connected ? new Date(session.expiresAt).toISOString() : null });
   } catch (e) { next(e); }
 });
 
