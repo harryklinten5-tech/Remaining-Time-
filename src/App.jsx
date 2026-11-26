@@ -1,13 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const KEY = 'shift-tracker-v1';
-const KEKA_API_URL = (import.meta.env.VITE_KEKA_API_URL || '').replace(/\/+$/, '');
+const KEKA_API_URL = (import.meta.env.VITE_KEKA_API_URL || '').replace(/\\/+$/, '');
+const KEKA_STATUS_KEY = ['keka', 'status'];
 const dateKey = (date = new Date()) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
 const currentDefaults = () => {
   const now = new Date();
   return { shiftHours: '8', completed: '00:00', startDate: dateKey(now), startTime: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') };
 };
 const DEFAULTS = currentDefaults();
+
+async function kekaRequest(path, options = {}) {
+  const response = await fetch(`${KEKA_API_URL}${path}`, { credentials: 'include', ...options });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error || `Keka request failed (${response.status}).`);
+  }
+  return response.status === 204 ? null : response.json();
+}
 
 function loadToday() {
   try {
@@ -23,13 +34,13 @@ function TimeEntry({ value, onChange }) {
 }
 
 function durationMinutes(value) {
-  const match = /^\s*(\d{1,3})\s*[:.]\s*(\d{1,2})\s*$/.exec(value);
+  const match = /^\\s*(\\d{1,3})\\s*[:.]\\s*(\\d{1,2})\\s*$/.exec(value);
   if (!match || Number(match[2]) > 59) throw new Error('Enter completed time as HH:MM, with minutes from 00 to 59.');
   return Number(match[1]) * 60 + Number(match[2]);
 }
 
 function parseClock(value) {
-  const match = /^\s*(\d{1,2}):(\d{2})\s*(AM|PM)?\s*$/i.exec(value);
+  const match = /^\\s*(\\d{1,2}):(\\d{2})\\s*(AM|PM)?\\s*$/i.exec(value);
   if (!match) throw new Error('Enter a time like 2:30 PM or 14:30.');
   let hour = Number(match[1]);
   const minute = Number(match[2]);
@@ -54,12 +65,27 @@ function formatTime(date, hour12) {
 }
 
 export default function App() {
+  const queryClient = useQueryClient();
   const [form, setForm] = useState(loadToday);
   const [now, setNow] = useState(Date.now());
   const [message, setMessage] = useState('');
   const [saved, setSaved] = useState(false);
-  const [kekaStatus, setKekaStatus] = useState({ loading: true, connected: false, error: '' });
-  const [kekaBusy, setKekaBusy] = useState(false);
+  const kekaStatusQuery = useQuery({
+    queryKey: KEKA_STATUS_KEY,
+    queryFn: () => kekaRequest('/api/keka/status'),
+    enabled: Boolean(KEKA_API_URL),
+    retry: false,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true
+  });
+  const disconnectKeka = useMutation({
+    mutationFn: () => kekaRequest('/api/keka/disconnect', { method: 'POST' }),
+    onSuccess: () => queryClient.setQueryData(KEKA_STATUS_KEY, { connected: false, connectedAt: null, accessTokenExpiresAt: null }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: KEKA_STATUS_KEY })
+  });
+  const kekaConnected = Boolean(kekaStatusQuery.data?.connected);
+  const kekaLoading = Boolean(KEKA_API_URL) && kekaStatusQuery.isLoading;
+  const kekaError = kekaStatusQuery.error?.message || disconnectKeka.error?.message || '';
 
   useEffect(() => {
     const tick = () => {
@@ -167,11 +193,11 @@ export default function App() {
         <p className="eyebrow">THIRD-PARTY CONNECTION</p>
         <h2>Connect Keka</h2>
         <p>Connect your Keka account to bring your attendance data into Shift Tracker. You stay in control of the connection.</p>
-        <span>{kekaStatus.loading ? 'Checking connection…' : kekaStatus.connected ? 'Connected' : 'Not connected'}</span>
-        {!kekaStatus.connected
-          ? <button className="primary" type="button" disabled={!KEKA_API_URL || kekaBusy || kekaStatus.loading} onClick={() => { setKekaBusy(true); window.location.assign(`${KEKA_API_URL}/api/keka/connect`); }}>{kekaBusy ? 'Opening Keka…' : 'Connect Keka'}</button>
-          : <button className="primary" type="button" disabled={kekaBusy} onClick={async () => { setKekaBusy(true); try { const response = await fetch(`${KEKA_API_URL}/api/keka/disconnect`, { method: 'POST', credentials: 'include' }); if (!response.ok) throw new Error('Disconnect failed.'); setKekaStatus({ loading: false, connected: false, error: '' }); } catch (error) { setKekaStatus(current => ({ ...current, error: error.message })); } finally { setKekaBusy(false); } }}>{kekaBusy ? 'Disconnecting…' : 'Disconnect Keka'}</button>}
-        {kekaStatus.error && <p className="error" role="alert">{kekaStatus.error}</p>}
+        <span>{kekaLoading ? 'Checking connection…' : kekaConnected ? 'Connected' : 'Not connected'}</span>
+        {!kekaConnected
+          ? <button className="primary" type="button" disabled={!KEKA_API_URL || kekaBusy || kekaLoading} onClick={() => { setKekaBusy(true); window.location.assign(`${KEKA_API_URL}/api/keka/connect`); }}>{kekaBusy ? 'Opening Keka…' : 'Connect Keka'}</button>
+          : <button className="primary" type="button" disabled={disconnectKeka.isPending} onClick={() => disconnectKeka.mutate()}>{disconnectKeka.isPending ? 'Disconnecting…' : 'Disconnect Keka'}</button>}
+        {kekaError && <p className="error" role="alert">{kekaError}</p>}
         {!KEKA_API_URL && <p className="hint">The Keka backend URL is not configured for this deployment.</p>}
         <p className="hint">Sign in only on Keka’s official authorization page. Do not enter your Keka password or API key here.</p>
       </aside>
