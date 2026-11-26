@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 const KEY = 'shift-tracker-v1';
-const DEFAULTS = { shiftHours: '8', completed: '00:00', startDateTime: '' };
+const DEFAULTS = { shiftHours: '8', completed: '00:00', startDate: '', startTime: '' };
 const dateKey = (date = new Date()) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
 
 function loadToday() {
@@ -19,9 +19,29 @@ function durationMinutes(value) {
   return Number(match[1]) * 60 + Number(match[2]);
 }
 
+function parseClock(value) {
+  const match = /^\s*(\d{1,2}):(\d{2})\s*(AM|PM)?\s*$/i.exec(value);
+  if (!match) throw new Error('Enter a time like 2:30 PM or 14:30.');
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const meridiem = match[3]?.toUpperCase();
+  if (minute > 59) throw new Error('Minutes must be between 00 and 59.');
+  if (meridiem) {
+    if (hour < 1 || hour > 12) throw new Error('For AM/PM times, enter an hour from 1 to 12.');
+    hour = (hour % 12) + (meridiem === 'PM' ? 12 : 0);
+  } else if (hour > 23) {
+    throw new Error('For 24-hour time, enter an hour from 00 to 23.');
+  }
+  return { hour, minute };
+}
+
 function duration(seconds) {
   const s = Math.max(0, Math.floor(seconds));
   return [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60].map(n => String(n).padStart(2, '0')).join(':');
+}
+
+function formatTime(date, hour12) {
+  return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', hour12 }).format(date);
 }
 
 export default function App() {
@@ -53,8 +73,18 @@ export default function App() {
       if (!Number.isInteger(total) || total < 60 || total > 720) throw new Error('Select a shift length from 1 to 12 hours.');
       const completed = durationMinutes(form.completed);
       const remaining = Math.max(0, total - completed);
-      const start = form.startDateTime ? new Date(form.startDateTime) : new Date(now);
-      if (Number.isNaN(start.getTime())) throw new Error('Choose a valid start date and time.');
+      let start;
+      if (!form.startDate && !form.startTime) {
+        start = new Date(now);
+      } else {
+        if (!form.startDate || !form.startTime) throw new Error('Enter both the counting start date and time.');
+        const { hour, minute } = parseClock(form.startTime);
+        const [year, month, day] = form.startDate.split('-').map(Number);
+        start = new Date(year, month - 1, day, hour, minute, 0, 0);
+        if (Number.isNaN(start.getTime()) || start.getFullYear() !== year || start.getMonth() !== month - 1 || start.getDate() !== day) {
+          throw new Error('Choose a valid start date.');
+        }
+      }
       const end = new Date(start.getTime() + remaining * 60000);
       return { remaining, completed, end, seconds: Math.max(0, Math.floor((end.getTime() - now) / 1000)) };
     } catch (error) { return { error: error.message }; }
@@ -102,9 +132,12 @@ export default function App() {
           <input type="time" step="60" value={form.completed} onChange={e => update('completed', e.target.value)} />
           <small>Enter the hours and minutes already completed.</small>
         </label>
-        <label>Counting start date and time <small>(optional)</small>
-          <input type="datetime-local" step="60" value={form.startDateTime} onChange={e => update('startDateTime', e.target.value)} />
-          <small>Leave blank to start counting from the current time.</small>
+        <label>Counting start date <small>(optional)</small>
+          <input type="date" value={form.startDate} onChange={e => update('startDate', e.target.value)} />
+        </label>
+        <label>Counting start time <small>(optional)</small>
+          <input type="text" inputMode="text" autoComplete="off" placeholder="e.g. 2:30 PM or 14:30" value={form.startTime} onChange={e => update('startTime', e.target.value)} />
+          <small>Use either 12-hour time (2:30 PM) or 24-hour time (14:30). Leave both date and time blank to use now.</small>
         </label>
         {message && <p className="error" role="alert">{message}</p>}
         {result.error && !message && <p className="hint">{result.error}</p>}
@@ -115,7 +148,8 @@ export default function App() {
         <p className="eyebrow">TIME REMAINING</p>
         <h2>{result.error ? '--:--:--' : duration(result.seconds)}</h2>
         <p>until your estimated shift end</p>
-        <div><span>Estimated end</span><strong>{result.error ? '—' : new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit',  }).format(result.end)}</strong></div>
+        <div><span>Estimated end (12-hour)</span><strong>{result.error ? '—' : formatTime(result.end, true)}</strong></div>
+        <div><span>Estimated end (24-hour)</span><strong>{result.error ? '—' : formatTime(result.end, false)}</strong></div>
         <div><span>Completed</span><strong>{result.error ? '—' : Math.floor(result.completed / 60) + 'h ' + result.completed % 60 + 'm'}</strong></div>
       </section>
       <aside className="keka">
