@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 const KEY = 'shift-tracker-v1';
+const KEKA_API_URL = (import.meta.env.VITE_KEKA_API_URL || '').replace(/\\/+$/, '');
 const dateKey = (date = new Date()) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
 const currentDefaults = () => {
   const now = new Date();
@@ -57,7 +58,8 @@ export default function App() {
   const [now, setNow] = useState(Date.now());
   const [message, setMessage] = useState('');
   const [saved, setSaved] = useState(false);
-  const [showKekaSetup, setShowKekaSetup] = useState(false);
+  const [kekaStatus, setKekaStatus] = useState({ loading: true, connected: false, error: '' });
+  const [kekaBusy, setKekaBusy] = useState(false);
 
   useEffect(() => {
     const tick = () => {
@@ -165,13 +167,13 @@ export default function App() {
         <p className="eyebrow">THIRD-PARTY CONNECTION</p>
         <h2>Connect Keka</h2>
         <p>Connect your Keka account to bring your attendance data into Shift Tracker. You stay in control of the connection.</p>
-        <span>Not connected</span>
-        <button className="primary" type="button" onClick={() => setShowKekaSetup(!showKekaSetup)}>{showKekaSetup ? 'Hide connection details' : 'Connect Keka'}</button>
-        {showKekaSetup && <div className="keka-setup" role="status">
-          <strong>Keka connection is not available yet.</strong>
-          <p>We’re preparing secure account authorization. Once enabled, you’ll sign in to Keka and approve access. Only then will authorized attendance data sync here.</p>
-          <p>No Keka password or API key should be entered into this page.</p>
-        </div>}
+        <span>{kekaStatus.loading ? 'Checking connection…' : kekaStatus.connected ? 'Connected' : 'Not connected'}</span>
+        {!kekaStatus.connected
+          ? <button className="primary" type="button" disabled={!KEKA_API_URL || kekaBusy || kekaStatus.loading} onClick={() => { setKekaBusy(true); window.location.assign(`${KEKA_API_URL}/api/keka/connect`); }}>{kekaBusy ? 'Opening Keka…' : 'Connect Keka'}</button>
+          : <button className="primary" type="button" disabled={kekaBusy} onClick={async () => { setKekaBusy(true); try { const response = await fetch(`${KEKA_API_URL}/api/keka/disconnect`, { method: 'POST', credentials: 'include' }); if (!response.ok) throw new Error('Disconnect failed.'); setKekaStatus({ loading: false, connected: false, error: '' }); } catch (error) { setKekaStatus(current => ({ ...current, error: error.message })); } finally { setKekaBusy(false); } }}>{kekaBusy ? 'Disconnecting…' : 'Disconnect Keka'}</button>}
+        {kekaStatus.error && <p className="error" role="alert">{kekaStatus.error}</p>}
+        {!KEKA_API_URL && <p className="hint">The Keka backend URL is not configured for this deployment.</p>}
+        <p className="hint">Sign in only on Keka’s official authorization page. Do not enter your Keka password or API key here.</p>
       </aside>
     </section>
     <footer>Local-first · No account required · Your time stays private</footer>
