@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 
 const KEY = 'shift-tracker-v1';
-const DEFAULTS = { shiftHours: '8', completed: '00:00', startDate: '', startTime: '' };
 const dateKey = (date = new Date()) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+const currentDefaults = () => {
+  const now = new Date();
+  return { shiftHours: '8', completed: '00:00', startDate: dateKey(now), startTime: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') };
+};
+const DEFAULTS = currentDefaults();
 
 function loadToday() {
   try {
@@ -11,6 +15,10 @@ function loadToday() {
     localStorage.removeItem(KEY);
   } catch { localStorage.removeItem(KEY); }
   return DEFAULTS;
+}
+
+function TimeEntry({ value, onChange }) {
+  return <input type="time" step="60" value={value} onChange={event => onChange(event.target.value)} />;
 }
 
 function durationMinutes(value) {
@@ -129,15 +137,15 @@ export default function App() {
           </select>
         </label>
         <label>Time already worked <small>(hours:minutes)</small>
-          <input type="time" step="60" value={form.completed} onChange={e => update('completed', e.target.value)} />
-          <small>Enter the hours and minutes already completed.</small>
+          <input type="text" inputMode="numeric" placeholder="HH:MM" value={form.completed} onChange={e => update('completed', e.target.value)} />
+          <small>Enter hours and minutes in 24-hour style (for example, 08:30). No AM/PM needed.</small>
         </label>
         <label>Counting start date <small>(optional)</small>
           <input type="date" value={form.startDate} onChange={e => update('startDate', e.target.value)} />
         </label>
         <label>Counting start time <small>(optional)</small>
-          <input type="text" inputMode="text" autoComplete="off" placeholder="e.g. 2:30 PM or 14:30" value={form.startTime} onChange={e => update('startTime', e.target.value)} />
-          <small>Use either 12-hour time (2:30 PM) or 24-hour time (14:30). Leave both date and time blank to use now.</small>
+          <TimeEntry value={form.startTime} onChange={value => update('startTime', value)} />
+          <small>Use the same time picker as “Time already worked.” AM/PM appears when your device/browser uses a 12-hour clock. The date and time default to today and now; change either if needed.</small>
         </label>
         {message && <p className="error" role="alert">{message}</p>}
         {result.error && !message && <p className="hint">{result.error}</p>}
