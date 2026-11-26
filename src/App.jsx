@@ -137,8 +137,8 @@ export default function App() {
           </select>
         </label>
         <label>Time already worked <small>(hours:minutes)</small>
-          <input type="time" step="60" value={form.completed} onChange={e => update('completed', e.target.value)} />
-          <small>Enter the hours and minutes already completed.</small>
+          <input type="text" inputMode="numeric" placeholder="HH:MM" value={form.completed} onChange={e => update('completed', e.target.value)} />
+          <small>Enter hours and minutes in 24-hour style (for example, 08:30). No AM/PM needed.</small>
         </label>
         <label>Counting start date <small>(optional)</small>
           <input type="date" value={form.startDate} onChange={e => update('startDate', e.target.value)} />
