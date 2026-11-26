@@ -195,7 +195,7 @@ export default function App() {
         <p>Connect your Keka account to bring your attendance data into Shift Tracker. You stay in control of the connection.</p>
         <span>{kekaLoading ? 'Checking connection…' : kekaConnected ? 'Connected' : 'Not connected'}</span>
         {!kekaConnected
-          ? <button className="primary" type="button" disabled={!KEKA_API_URL || kekaBusy || kekaLoading} onClick={() => { setKekaBusy(true); window.location.assign(`${KEKA_API_URL}/api/keka/connect`); }}>{kekaBusy ? 'Opening Keka…' : 'Connect Keka'}</button>
+          ? <button className="primary" type="button" disabled={!KEKA_API_URL || kekaLoading} onClick={() => window.location.assign(`${KEKA_API_URL}/api/keka/connect`)}>Connect Keka</button>
           : <button className="primary" type="button" disabled={disconnectKeka.isPending} onClick={() => disconnectKeka.mutate()}>{disconnectKeka.isPending ? 'Disconnecting…' : 'Disconnect Keka'}</button>}
         {kekaError && <p className="error" role="alert">{kekaError}</p>}
         {!KEKA_API_URL && <p className="hint">The Keka backend URL is not configured for this deployment.</p>}
