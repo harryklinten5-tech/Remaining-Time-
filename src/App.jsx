@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 const KEY = 'shift-tracker-v1';
-const KEKA_API_URL = (import.meta.env.VITE_KEKA_API_URL || '').replace(/\\/+$/, '');
+const KEKA_API_URL = (import.meta.env.VITE_KEKA_API_URL || '').replace(/\/+$/, '');
 const dateKey = (date = new Date()) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
 const currentDefaults = () => {
   const now = new Date();
