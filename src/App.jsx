@@ -83,6 +83,14 @@ export default function App() {
     } catch (error) { return { error: error.message }; }
   }, [form, now]);
 
+  useEffect(() => {
+    if (result.error) { setSaved(false); return; }
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ date: dateKey(), values: form }));
+      setSaved(true);
+    } catch { setSaved(false); }
+  }, [form, result.error]);
+
   const update = (key, value) => { setForm(current => ({ ...current, [key]: value })); setSaved(false); setMessage(''); };
   const save = event => {
     event.preventDefault();
