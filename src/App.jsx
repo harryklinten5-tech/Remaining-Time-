@@ -18,7 +18,7 @@ function loadToday() {
 }
 
 function TimeEntry({ value, onChange }) {
-  return <input type="time" step="60" aria-label="Counting start time" value={value} onChange={event => onChange(event.target.value)} />;
+  return <input type="time" step="60" value={value} onChange={event => onChange(event.target.value)} />;
 }
 
 function durationMinutes(value) {
@@ -145,7 +145,7 @@ export default function App() {
         </label>
         <label>Counting start time <small>(optional)</small>
           <TimeEntry value={form.startTime} onChange={value => update('startTime', value)} />
-          <small>Use the time picker; its display format follows your device locale. The date and time default to today and now; change either if needed.</small>
+          <small>Use the same time picker as “Time already worked.” AM/PM appears when your device/browser uses a 12-hour clock. The date and time default to today and now; change either if needed.</small>
         </label>
         {message && <p className="error" role="alert">{message}</p>}
         {result.error && !message && <p className="hint">{result.error}</p>}
