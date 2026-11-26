@@ -85,6 +85,11 @@ export default function App() {
 
   useEffect(() => {
     if (result.error) { setSaved(false); return; }
+    if (JSON.stringify(form) === JSON.stringify(DEFAULTS)) {
+      localStorage.removeItem(KEY);
+      setSaved(false);
+      return;
+    }
     try {
       localStorage.setItem(KEY, JSON.stringify({ date: dateKey(), values: form }));
       setSaved(true);
