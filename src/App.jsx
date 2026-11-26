@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
 const KEY = 'shift-tracker-v1';
-const DEFAULTS = { shiftHours: '8', completed: '00:00', startDate: '', startTime: '' };
 const dateKey = (date = new Date()) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
 const currentDefaults = () => {
   const now = new Date();
@@ -19,7 +18,7 @@ function loadToday() {
 }
 
 function TimeEntry({ value, onChange }) {
-  return <input type="text" inputMode="text" autoComplete="off" aria-label="Counting start time" placeholder="e.g. 2:30 PM or 14:30" value={value} onChange={event => onChange(event.target.value)} />;
+  return <input type="time" step="60" aria-label="Counting start time" value={value} onChange={event => onChange(event.target.value)} />;
 }
 
 function durationMinutes(value) {
@@ -146,7 +145,7 @@ export default function App() {
         </label>
         <label>Counting start time <small>(optional)</small>
           <TimeEntry value={form.startTime} onChange={value => update('startTime', value)} />
-          <small>Use either 12-hour time (2:30 PM) or 24-hour time (14:30). The date and time start at today and the current time; change either if needed.</small>
+          <small>Use the time picker; its display format follows your device locale. The date and time default to today and now; change either if needed.</small>
         </label>
         {message && <p className="error" role="alert">{message}</p>}
         {result.error && !message && <p className="hint">{result.error}</p>}
