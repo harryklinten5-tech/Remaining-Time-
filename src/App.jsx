@@ -97,6 +97,8 @@ export default function App() {
     } catch (error) { return { error: error.message }; }
   }, [form, now]);
 
+  const shiftComplete = !result.error && result.seconds === 0;
+
   useEffect(() => {
     if (result.error) { setSaved(false); return; }
     if (JSON.stringify(form) === JSON.stringify(DEFAULTS)) {
@@ -159,6 +161,12 @@ export default function App() {
         <div><span>Estimated end (24-hour)</span><strong>{result.error ? '—' : formatTime(result.end, false)}</strong></div>
         <div><span>Completed</span><strong>{result.error ? '—' : Math.floor(result.completed / 60) + 'h ' + result.completed % 60 + 'm'}</strong></div>
       </section>
+      {shiftComplete && <section className="celebration" aria-live="polite" aria-label="Shift complete">
+        <div className="confetti" aria-hidden="true">{Array.from({ length: 14 }, (_, i) => <span key={i} style={{ '--i': i }} />)}</div>
+        <p className="eyebrow">SHIFT COMPLETE</p>
+        <h2>Great work today!</h2>
+        <p>You’ve earned your time to unwind.</p>
+      </section>}
     </section>
     <footer>Local-first · No account required · Your time stays private</footer>
   </main>;
