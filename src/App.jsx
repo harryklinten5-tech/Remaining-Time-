@@ -23,13 +23,13 @@ function TimeEntry({ value, onChange }) {
 
 function WorkedTimeEntry({ value, onChange }) {
   const inputRef = useRef(null);
-  const pendingCaret = useRef(null);
+  const pendingCaret = useRef(null);\n  const [caretVersion, setCaretVersion] = useState(0);
 
   useLayoutEffect(() => {
     if (pendingCaret.current === null || !inputRef.current) return;
     inputRef.current.setSelectionRange(pendingCaret.current, pendingCaret.current);
     pendingCaret.current = null;
-  }, [value]);
+  }, [value, caretVersion]);
 
   function handleChange(event) {
     const input = event.currentTarget;
@@ -45,7 +45,7 @@ function WorkedTimeEntry({ value, onChange }) {
     // Count typed digits rather than characters so deleting the colon never
     // traps the caret or prevents the next digit from being entered.
     pendingCaret.current = digitsBeforeCaret + (digitsBeforeCaret >= 2 && digits.length >= 2 ? 1 : 0);
-    onChange(formatted);
+    setCaretVersion(version => version + 1);\n    onChange(formatted);
   }
 
   return <div className="worked-time-entry">
