@@ -18,7 +18,6 @@ class WorkedTimePicker extends HTMLElement {
         .wheel:focus-visible{outline:2px solid var(--picker-focus,#657fe7);outline-offset:2px}
         .selection{position:absolute;pointer-events:none;left:7px;right:7px;top:50%;height:46px;transform:translateY(-50%);border-radius:9px;border:1px solid var(--picker-focus,#8795c9);background:var(--picker-highlight,rgba(111,130,207,.09))}
         .preview{display:block;margin-top:12px;text-align:center;font-size:23px;font-weight:750;letter-spacing:.04em;font-variant-numeric:tabular-nums;color:var(--picker-selected,#24314f)}
-        .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
       </style>
       <div class="picker">
         <section class="wheel-group"><p class="heading">Hours <span>(HH)</span></p><div class="wheel" id="hours" role="listbox" aria-label="Worked hours" tabindex="0"><div class="selection"></div><div class="options"></div></div></section>
@@ -32,8 +31,8 @@ class WorkedTimePicker extends HTMLElement {
   connectedCallback() {
     this.renderOptions("hours", 12);
     this.renderOptions("minutes", 59);
-    this.shadowRoot.querySelectorAll(".wheel").forEach((wheel) => wheel.addEventListener("scroll", this.onScroll, { passive: true }));
     this.shadowRoot.querySelectorAll(".wheel").forEach((wheel) => {
+      wheel.addEventListener("scroll", this.onScroll, { passive: true });
       wheel.addEventListener("keydown", (event) => this.onKeyDown(event, wheel));
     });
     this.setValue(this.getAttribute("value") || "00:00", false);
@@ -60,10 +59,8 @@ class WorkedTimePicker extends HTMLElement {
 
   setValue(value, emit = false) {
     const match = /^(\d{1,2}):(\d{2})$/.exec(String(value));
-    const hours = match ? Math.min(12, Number(match[1])) : 0;
-    const minutes = match ? Math.min(59, Number(match[2])) : 0;
-    this.hours = hours;
-    this.minutes = minutes;
+    this.hours = match ? Math.min(12, Number(match[1])) : 0;
+    this.minutes = match ? Math.min(59, Number(match[2])) : 0;
     this.syncWheels();
     this.updatePreview();
     if (emit) this.dispatchEvent(new CustomEvent("change", { detail: { value: this.value }, bubbles: true }));
@@ -86,7 +83,11 @@ class WorkedTimePicker extends HTMLElement {
       const wheel = this.shadowRoot.getElementById(type);
       const option = wheel.querySelector(`[data-value="${value}"]`);
       wheel.querySelectorAll(".option").forEach((item) => item.setAttribute("aria-selected", String(item === option)));
-      if (option) wheel.scrollTop = option.offsetTop - wheel.offsetTop - (wheel.clientHeight - option.offsetHeight) / 2;
+      if (option) {
+        const wheelRect = wheel.getBoundingClientRect();
+        const optionRect = option.getBoundingClientRect();
+        wheel.scrollTop += optionRect.top + optionRect.height / 2 - (wheelRect.top + wheel.clientHeight / 2);
+      }
     }
   }
 
