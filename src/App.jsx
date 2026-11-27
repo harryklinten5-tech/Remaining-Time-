@@ -23,7 +23,8 @@ function TimeEntry({ value, onChange }) {
 
 function WorkedTimeEntry({ value, onChange }) {
   const inputRef = useRef(null);
-  const pendingCaret = useRef(null);\n  const [caretVersion, setCaretVersion] = useState(0);
+  const pendingCaret = useRef(null);
+  const [caretVersion, setCaretVersion] = useState(0);
 
   useLayoutEffect(() => {
     if (pendingCaret.current === null || !inputRef.current) return;
@@ -34,8 +35,8 @@ function WorkedTimeEntry({ value, onChange }) {
   function handleChange(event) {
     const input = event.currentTarget;
     const beforeCaret = input.value.slice(0, input.selectionStart ?? input.value.length);
-    const digitsBeforeCaret = beforeCaret.replace(/\\D/g, '').length;
-    const digits = input.value.replace(/\\D/g, '').slice(0, 4);
+    const digitsBeforeCaret = beforeCaret.replace(/\D/g, '').length;
+    const digits = input.value.replace(/\D/g, '').slice(0, 4);
     const formatted = digits.length > 2
       ? `${digits.slice(0, 2)}:${digits.slice(2)}`
       : digits.length === 2
@@ -45,7 +46,8 @@ function WorkedTimeEntry({ value, onChange }) {
     // Count typed digits rather than characters so deleting the colon never
     // traps the caret or prevents the next digit from being entered.
     pendingCaret.current = digitsBeforeCaret + (digitsBeforeCaret >= 2 && digits.length >= 2 ? 1 : 0);
-    setCaretVersion(version => version + 1);\n    onChange(formatted);
+    setCaretVersion(version => version + 1);
+    onChange(formatted);
   }
 
   return <div className="worked-time-entry">
@@ -61,7 +63,7 @@ function WorkedTimeEntry({ value, onChange }) {
       onChange={handleChange}
     />
     <output className="time-preview" aria-live="polite">
-      Preview: {/^\\d{2}:\\d{2}$/.test(value) ? value : value || '00:00'}
+      Preview: {/^\d{2}:\d{2}$/.test(value) ? value : value || '00:00'}
     </output>
   </div>;
 }
