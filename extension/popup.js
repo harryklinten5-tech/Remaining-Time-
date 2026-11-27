@@ -24,7 +24,7 @@ function fillWorkedTimeOptions() {
   for (let hour = 0; hour <= 12; hour += 1) {
     const option = document.createElement("option");
     option.value = String(hour);
-    option.textContent = String(hour);
+    option.textContent = pad(hour);
     $("completed-hours").append(option);
   }
   for (let minute = 0; minute < 60; minute += 1) {
@@ -35,14 +35,19 @@ function fillWorkedTimeOptions() {
   }
 }
 
+function selectedWorkedTime() {
+  return `${$("completed-hours").value}:${$("completed-minutes").value}`;
+}
+
+function updateWorkedPreview() {
+  $("worked-preview").textContent = selectedWorkedTime().split(":").map((part) => pad(Number(part))).join(":");
+}
+
 function setWorkedTime(value) {
   const match = /^\s*(\d{1,3})\s*[:.]\s*(\d{1,2})\s*$/.exec(value || "00:00");
   $("completed-hours").value = match ? String(Number(match[1])) : "0";
   $("completed-minutes").value = match && Number(match[2]) <= 59 ? String(Number(match[2])) : "0";
-}
-
-function selectedWorkedTime() {
-  return `${$("completed-hours").value}:${$("completed-minutes").value}`;
+  updateWorkedPreview();
 }
 
 function currentSettings() {
@@ -107,6 +112,8 @@ async function init() {
   $("shift-hours").value = settings.shiftHours;
   $("start-time").value = settings.startTime;
   setWorkedTime(settings.completed);
+  $("completed-hours").addEventListener("change", updateWorkedPreview);
+  $("completed-minutes").addEventListener("change", updateWorkedPreview);
   $("settings").addEventListener("submit", async (event) => {
     event.preventDefault();
     settings = {
