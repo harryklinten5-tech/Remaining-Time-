@@ -14,10 +14,35 @@ const clock = (date) => new Intl.DateTimeFormat(undefined, { hour: "numeric", mi
 
 function parseCompleted(value) {
   const match = /^\s*(\d{1,3})\s*[:.]\s*(\d{1,2})\s*$/.exec(value);
-  if (!match || Number(match[2]) > 59) throw new Error("Enter worked time as HH:MM (minutes 00–59).");
+  if (!match || Number(match[2]) > 59) throw new Error("Choose valid worked hours and minutes.");
   const minutes = Number(match[1]) * 60 + Number(match[2]);
   if (minutes > 720) throw new Error("Worked time cannot exceed 12 hours.");
   return minutes;
+}
+
+function fillWorkedTimeOptions() {
+  for (let hour = 0; hour <= 12; hour += 1) {
+    const option = document.createElement("option");
+    option.value = String(hour);
+    option.textContent = String(hour);
+    $("completed-hours").append(option);
+  }
+  for (let minute = 0; minute < 60; minute += 1) {
+    const option = document.createElement("option");
+    option.value = String(minute);
+    option.textContent = pad(minute);
+    $("completed-minutes").append(option);
+  }
+}
+
+function setWorkedTime(value) {
+  const match = /^\s*(\d{1,3})\s*[:.]\s*(\d{1,2})\s*$/.exec(value || "00:00");
+  $("completed-hours").value = match ? String(Number(match[1])) : "0";
+  $("completed-minutes").value = match && Number(match[2]) <= 59 ? String(Number(match[2])) : "0";
+}
+
+function selectedWorkedTime() {
+  return `${$("completed-hours").value}:${$("completed-minutes").value}`;
 }
 
 function currentSettings() {
@@ -46,8 +71,9 @@ function render() {
   $("today").textContent = new Intl.DateTimeFormat(undefined, { dateStyle: "full" }).format(now);
   if (!settings || settings.date !== todayKey(now)) settings = currentSettings();
   let value;
-  try { value = validate(settings); }
-  catch (error) {
+  try {
+    value = validate(settings);
+  } catch (error) {
     $("error").hidden = false;
     $("error").textContent = error.message;
     $("remaining").textContent = "--:--:--";
@@ -75,22 +101,33 @@ async function persist() {
 }
 
 async function init() {
+  fillWorkedTimeOptions();
   const stored = await chrome.storage.local.get(STORE_KEY);
   settings = stored[STORE_KEY]?.date === todayKey() ? stored[STORE_KEY] : currentSettings();
   $("shift-hours").value = settings.shiftHours;
   $("start-time").value = settings.startTime;
-  $("completed").value = settings.completed;
+  setWorkedTime(settings.completed);
   $("settings").addEventListener("submit", async (event) => {
     event.preventDefault();
-    settings = { date: todayKey(), shiftHours: $("shift-hours").value, startTime: $("start-time").value, completed: $("completed").value };
-    try { validate(settings); await persist(); }
-    catch (error) { $("error").hidden = false; $("error").textContent = error.message; }
+    settings = {
+      date: todayKey(),
+      shiftHours: $("shift-hours").value,
+      startTime: $("start-time").value,
+      completed: selectedWorkedTime()
+    };
+    try {
+      validate(settings);
+      await persist();
+    } catch (error) {
+      $("error").hidden = false;
+      $("error").textContent = error.message;
+    }
   });
   $("reset").addEventListener("click", async () => {
     settings = currentSettings();
     $("shift-hours").value = settings.shiftHours;
     $("start-time").value = settings.startTime;
-    $("completed").value = settings.completed;
+    setWorkedTime(settings.completed);
     await persist();
   });
   render();
