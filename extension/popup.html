@@ -29,11 +29,12 @@
       <div class="fields">
         <label>Start time<input id="start-time" name="startTime" type="time" required></label>
         <fieldset class="worked-time">
-          <legend>Already worked</legend>
-          <label for="completed-hours">Hours</label>
-          <select id="completed-hours" name="completedHours" aria-label="Already worked hours"></select>
-          <label for="completed-minutes">Minutes</label>
-          <select id="completed-minutes" name="completedMinutes" aria-label="Already worked minutes"></select>
+          <legend>Time already worked</legend>
+          <label for="completed-hours">Hours (HH)</label>
+          <select id="completed-hours" name="completedHours" aria-label="Worked hours"></select>
+          <label for="completed-minutes">Minutes (MM)</label>
+          <select id="completed-minutes" name="completedMinutes" aria-label="Worked minutes"></select>
+          <output id="worked-preview" class="worked-preview" aria-live="polite">00:00</output>
         </fieldset>
       </div>
       <p id="error" class="error" role="alert" hidden></p>
