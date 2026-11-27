@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Remaining Time — Shift Tracker",
+  "version": "1.0.0",
+  "description": "A simple, private countdown for your workday.",
+  "action": {
+    "default_title": "Remaining Time",
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+    "storage"
+  ]
+}
