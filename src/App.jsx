@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 const KEY = 'shift-tracker-v1';
 const dateKey = (date = new Date()) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
@@ -19,6 +19,51 @@ function loadToday() {
 
 function TimeEntry({ value, onChange }) {
   return <input type="time" step="60" value={value} onChange={event => onChange(event.target.value)} />;
+}
+
+function WorkedTimeEntry({ value, onChange }) {
+  const inputRef = useRef(null);
+  const pendingCaret = useRef(null);
+
+  useLayoutEffect(() => {
+    if (pendingCaret.current === null || !inputRef.current) return;
+    inputRef.current.setSelectionRange(pendingCaret.current, pendingCaret.current);
+    pendingCaret.current = null;
+  }, [value]);
+
+  function handleChange(event) {
+    const input = event.currentTarget;
+    const beforeCaret = input.value.slice(0, input.selectionStart ?? input.value.length);
+    const digitsBeforeCaret = beforeCaret.replace(/\\D/g, '').length;
+    const digits = input.value.replace(/\\D/g, '').slice(0, 4);
+    const formatted = digits.length > 2
+      ? `${digits.slice(0, 2)}:${digits.slice(2)}`
+      : digits.length === 2
+        ? `${digits}:`
+        : digits;
+
+    // Count typed digits rather than characters so deleting the colon never
+    // traps the caret or prevents the next digit from being entered.
+    pendingCaret.current = digitsBeforeCaret + (digitsBeforeCaret >= 2 && digits.length >= 2 ? 1 : 0);
+    onChange(formatted);
+  }
+
+  return <div className="worked-time-entry">
+    <input
+      ref={inputRef}
+      type="text"
+      inputMode="numeric"
+      autoComplete="off"
+      aria-label="Time already worked, hours and minutes"
+      placeholder="HH:MM"
+      maxLength={5}
+      value={value}
+      onChange={handleChange}
+    />
+    <output className="time-preview" aria-live="polite">
+      Preview: {/^\\d{2}:\\d{2}$/.test(value) ? value : value || '00:00'}
+    </output>
+  </div>;
 }
 
 function durationMinutes(value) {
@@ -138,7 +183,7 @@ export default function App() {
           </select>
         </label>
         <label>Time already worked <small>(hours:minutes)</small>
-          <input type="text" inputMode="numeric" placeholder="HH:MM" value={form.completed} onChange={e => update('completed', e.target.value)} />
+          <WorkedTimeEntry value={form.completed} onChange={value => update('completed', value)} />
           <small>Enter hours and minutes in 24-hour style (for example, 08:30). No AM/PM needed.</small>
         </label>
         <label>Counting start date <small>(optional)</small>
