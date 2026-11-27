@@ -20,36 +20,6 @@ function parseCompleted(value) {
   return minutes;
 }
 
-function fillWorkedTimeOptions() {
-  for (let hour = 0; hour <= 12; hour += 1) {
-    const option = document.createElement("option");
-    option.value = String(hour);
-    option.textContent = pad(hour);
-    $("completed-hours").append(option);
-  }
-  for (let minute = 0; minute < 60; minute += 1) {
-    const option = document.createElement("option");
-    option.value = String(minute);
-    option.textContent = pad(minute);
-    $("completed-minutes").append(option);
-  }
-}
-
-function selectedWorkedTime() {
-  return `${$("completed-hours").value}:${$("completed-minutes").value}`;
-}
-
-function updateWorkedPreview() {
-  $("worked-preview").textContent = selectedWorkedTime().split(":").map((part) => pad(Number(part))).join(":");
-}
-
-function setWorkedTime(value) {
-  const match = /^\s*(\d{1,3})\s*[:.]\s*(\d{1,2})\s*$/.exec(value || "00:00");
-  $("completed-hours").value = match ? String(Number(match[1])) : "0";
-  $("completed-minutes").value = match && Number(match[2]) <= 59 ? String(Number(match[2])) : "0";
-  updateWorkedPreview();
-}
-
 function currentSettings() {
   const now = new Date();
   return { date: todayKey(now), shiftHours: "8", startTime: timeNow(now), completed: "00:00" };
@@ -106,21 +76,19 @@ async function persist() {
 }
 
 async function init() {
-  fillWorkedTimeOptions();
+  const picker = $("worked-time-picker");
   const stored = await chrome.storage.local.get(STORE_KEY);
   settings = stored[STORE_KEY]?.date === todayKey() ? stored[STORE_KEY] : currentSettings();
   $("shift-hours").value = settings.shiftHours;
   $("start-time").value = settings.startTime;
-  setWorkedTime(settings.completed);
-  $("completed-hours").addEventListener("change", updateWorkedPreview);
-  $("completed-minutes").addEventListener("change", updateWorkedPreview);
+  picker.setValue(settings.completed || "00:00");
   $("settings").addEventListener("submit", async (event) => {
     event.preventDefault();
     settings = {
       date: todayKey(),
       shiftHours: $("shift-hours").value,
       startTime: $("start-time").value,
-      completed: selectedWorkedTime()
+      completed: picker.value
     };
     try {
       validate(settings);
@@ -134,7 +102,7 @@ async function init() {
     settings = currentSettings();
     $("shift-hours").value = settings.shiftHours;
     $("start-time").value = settings.startTime;
-    setWorkedTime(settings.completed);
+    picker.setValue(settings.completed);
     await persist();
   });
   render();
