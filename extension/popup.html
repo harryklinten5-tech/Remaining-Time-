@@ -28,7 +28,13 @@
       </label>
       <div class="fields">
         <label>Start time<input id="start-time" name="startTime" type="time" required></label>
-        <label>Already worked<input id="completed" name="completed" type="text" inputmode="numeric" placeholder="HH:MM" value="00:00" pattern="\\d{1,3}[:.]\\d{1,2}" required></label>
+        <fieldset class="worked-time">
+          <legend>Already worked</legend>
+          <label for="completed-hours">Hours</label>
+          <select id="completed-hours" name="completedHours" aria-label="Already worked hours"></select>
+          <label for="completed-minutes">Minutes</label>
+          <select id="completed-minutes" name="completedMinutes" aria-label="Already worked minutes"></select>
+        </fieldset>
       </div>
       <p id="error" class="error" role="alert" hidden></p>
       <div class="actions"><button class="primary" type="submit">Save shift</button><button id="reset" class="secondary" type="button">Reset</button></div>
